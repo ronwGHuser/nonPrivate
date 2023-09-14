@@ -1,0 +1,101 @@
+{ config, lib, pkgs, ... }:
+
+{
+  imports = [ <nixpkgs/nixos/modules/installer/virtualbox-demo.nix> ];
+
+  # Let demo build as a trusted user.
+ nix.settings.trusted-users = [ "demo" ];
+
+# Mount a VirtualBox shared folder.
+# This is configurable in the VirtualBox menu at
+# Machine / Settings / Shared Folders.
+# fileSystems."/mnt" = {
+#   fsType = "vboxsf";
+#   device = "nameofdevicetomount";
+#   options = [ "rw" ];
+# };
+
+# By default, the NixOS VirtualBox demo image includes SDDM and Plasma.
+# If you prefer another desktop manager or display manager, you may want
+# to disable the default.
+# services.xserver.desktopManager.plasma5.enable = lib.mkForce false;
+# services.xserver.displayManager.sddm.enable = lib.mkForce false;
+
+# Enable GDM/GNOME by uncommenting above two lines and two lines below.
+# services.xserver.displayManager.gdm.enable = true;
+# services.xserver.desktopManager.gnome.enable = true;
+
+# Set your time zone.
+time.timeZone = "America/Denver";
+
+# List packages installed in system profile. To search, run:
+# \$ nix search wget
+environment.systemPackages = with pkgs; [
+  wget
+  vim
+  openssh
+  static-web-server
+];
+
+
+services.mysql.package = pkgs.mariadb;
+services.mysql.enable = true;
+
+#services.static-web-server = {
+#  enable = true;
+#  listen = "[::]:80";
+#  root = "/home/waltmanr/staticWebServer";
+#  root = "/tmp";
+#};
+
+services.nginx = {
+  enable = true;
+  recommendedProxySettings = true;
+  recommendedTlsSettings = true;
+  virtualHosts."localhost" = {
+    root = "/var/www/html/";
+ #   locations."/var/www/html".proxyPass = "http://localhost:8000";
+  };
+#  appendHttpConfig = "listen 127.0.0.1:80;";
+};
+
+
+# Enable the OpenSSH daemon.
+services.openssh = {
+  enable = true;
+  passwordAuthentication = true;
+};
+networking.hostName = "server-demo";
+networking.firewall.allowedTCPPorts = [ 22 80 443 ];
+networking.useDHCP = true;
+networking.interfaces.enp1s0.useDHCP = true;
+
+
+systemd.tmpfiles.rules = [
+  "d /var/www 0755 root root -"
+  "d /var/www/html 0755 root root -"
+#        "d /home/arek/navidrome 0770 arek users -"
+ #       "d /home/arek/navidrome/data 0770 arek users -"
+  ];
+
+
+
+
+###
+# Add my user
+# used root user to set the password, figure out how to
+# set default password
+###
+users.users.waltmanr = {
+  createHome = true;
+  isNormalUser  = true;
+  home  = "/home/waltmanr";
+  description  = "Ron Waltman";
+  extraGroups  = [ "wheel"
+                   "networkmanager"
+                 ];
+#  shell = "/bin/sh";
+  openssh.authorizedKeys.keys  = [ "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIkUFnr2nYIUNrth6J9uJ9vvlZoCPmhK7OQ8RzBEXou4 ronaldwaltman01@gmail.com" ];
+};
+
+}
